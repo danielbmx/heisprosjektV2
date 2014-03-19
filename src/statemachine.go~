@@ -1,0 +1,185 @@
+// State Machine 
+
+package elevdriver
+
+import ("time"
+		"fmt"
+		"./networkmodule"
+		)
+
+
+
+// States
+type State int
+const (
+    INVALID State = iota
+    MOVING
+    STANDSTILL
+    //EMG_STOPPED
+    N_STATES
+)
+
+// Events
+type Event int
+const(
+	INITIALIZE = iota
+	NOEVENT
+	MOVE
+	HALT
+	//EMGSTOP
+	N_EVENTS
+)
+
+
+// Private variables:
+var last_floor = make(chan int, 1)
+var timeStart time.Time
+var currentState State = INVALID
+var event Event
+
+
+// channels for listening:
+var ButtonEventChan      = make(chan Button, 1)
+var FloorEventChan       = make(chan int, 1)
+var DirEventChan         = make(chan Direction, 1)
+
+
+func UpdateState() { 
+	for {
+/**/
+		time.Sleep(10*time.Millisecond)
+/**/	
+		event := GetNextEvent(currentState, FloorEventChan, networkmodule.OrderChannel)
+		//fmt.Println("State:", currentState, "  Event:", event)
+		switch currentState {
+		    case INVALID:
+		         switch event {
+		            case INITIALIZE:
+		            	DirEventChan <- NONE
+		                Init(ButtonEventChan, FloorEventChan)
+		                currentState = STANDSTILL
+		                fmt.Println("INVALID-INITIALIZE")
+		            case NOEVENT:
+		                break 
+		            case MOVE:
+		                break 
+		            case HALT:
+		                break 
+		                }
+		    
+		    case MOVING:
+		        switch event {
+		            case INITIALIZE:
+		                break
+		            case NOEVENT:
+		                break 
+		            case MOVE:
+		                break 
+		            case HALT:
+		                
+		                //Stop car
+		                //Setmot
+		                //Open door for 3 sec
+		                //Delete this order from queue HAPPENS IN ORDERSYSTEM!
+		                //current state = STANDSTILL
+		                
+		                SetMotorDir(NONE)
+		                SetDoorOpenLight(ON)
+		                timeStart = time.Now()
+		                currentState = STANDSTILL
+		                }
+		                
+		    case STANDSTILL:
+		        switch event {
+		            case INITIALIZE:
+		                break
+		            case NOEVENT:
+		                //Close door if door has been open for more than 3 sec
+		                closeTime := time.Now()
+		                if closeTime.Sub(timeStart) > 3 {
+		                    SetDoorOpenLight(OFF)
+		                    }
+		            case MOVE:
+		                //move car in right direction
+		                //current state = MOVING
+		                SetMotorDir(UP)
+		                time.Sleep(time.Second)
+		                SetMotorDir(NONE)
+		                currentState = MOVING
+		            
+		            case HALT:
+		                //Open door
+		                
+		                SetDoorOpenLight(ON)
+		       }
+		}
+	}
+}
+
+
+func GetNextEvent(currentState State, floorEventChan chan int, orderChan chan[4][3] int) Event { 
+    //fmt.Println("Inside GetNextEvent")
+    switch currentState {
+    
+        case INVALID:
+        	return INITIALIZE
+        
+        case MOVING:
+        	// if should stop
+        	//return HALT
+        	
+        	// Read from orderChan
+        	matrix := <- orderChan
+        	orderChan <- matrix
+        	fmt.Println(matrix)
+        	
+        	// Read from FloorEventChan
+        	floor := <- FloorEventChan
+        	FloorEventChan <- floor
+        	fmt.Println(floor)
+        	// "Compare"
+        	
+        	
+        	
+        	// if shoud continue moving
+        	// return NOEVENT 
+        	return NOEVENT   
+        
+        case STANDSTILL:
+        	//if order in queue
+        	fmt.Println("Inside Standstill")
+        	return MOVE
+        	
+        	// if no order in queue
+        	// return NOEVENT
+        default:
+        	fmt.Println("Returning NOEVENT")
+        	return NOEVENT
+    }
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

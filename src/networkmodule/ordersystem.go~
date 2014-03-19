@@ -1,0 +1,230 @@
+// Ordersystem
+package networkmodule
+
+import (
+	"fmt"
+	//"net"
+	"time"
+	elevdriver "../elevdriver"
+) 
+
+
+
+type setLight struct {
+    Floor int
+    Dir elevdriver.Direction
+	Light elevdriver.LightVal
+}
+
+var OrderChannel = make(chan [4][3]int, 10)
+
+func InitOrderMatrix(orderchan chan [4][3]int) {
+	var ordermatrix[4][3]int
+	
+	for i := 0; i<4; i++ {
+		for j := 0; j<3; j++{
+			ordermatrix[i][j] = 0;
+		}
+	}
+	orderchan <- ordermatrix
+}
+
+func SaveOrder(buttonEventChan chan elevdriver.Button, orderchan chan [4][3]int){
+	for{
+		button := <-buttonEventChan
+		buttonEventChan <- button
+		ordermatrix := <- orderchan
+		ordermatrix[button.Floor - 1][button.Dir] = 1
+		orderchan <- ordermatrix
+		time.Sleep(50*time.Millisecond)
+	}
+}
+
+
+func CalculateCost(buttonEventChan chan elevdriver.Button, floorEventChan chan int, floorDirectionChan chan elevdriver.Direction) int{
+	dir := <- floorDirectionChan
+	floorDirectionChan <- dir
+	floor := <- floorEventChan
+	floorEventChan <- floor
+	button := <- buttonEventChan
+	buttonEventChan <- button
+	score := 0
+	if dir != button.Dir {
+		score += 1
+	}
+	if floor != button.Floor {
+		score += 1
+	}
+	if button.Dir == elevdriver.DOWN {
+		if floor >= button.Floor{
+			score += (floor - button.Floor)
+		}else{
+			score += 4
+		}
+	}
+	if button.Dir == elevdriver.UP {
+		if floor <= button.Floor{
+			score += (button.Floor - floor)
+		}else{
+			score += 4
+		}
+	}
+	return score
+}
+
+func ResetOrder(elevator int, orderchan chan[4][3]int) {
+	ordermatrix := <- orderchan
+	for i := 0; i < 4; i++ {
+		for j := 0; j < 3; j++ {
+			if ordermatrix[i][j] == elevator{
+				ordermatrix[i][j] = 1
+			}
+		}
+	}
+}
+
+func DeleteOrder(button elevdriver.Button, orderchan chan[4][3]int){
+   ordermatrix := <- orderchan
+   ordermatrix[button.Floor][button.Dir] = 0
+   orderchan <- ordermatrix
+}
+
+
+
+func StopAtFloor(dirEventChan chan elevdriver.Direction, floorEventChan chan int, orderChan chan [4][3]int) bool {
+	//fmt.Println("inside StopAtFloor")
+	dir := <- dirEventChan
+	dirEventChan <- dir
+	
+	floor := <- floorEventChan
+	floorEventChan <- floor
+	//fmt.Println(floor)
+	matrix := <- orderChan
+	orderChan <- matrix
+	if floor == -1{
+		return false
+	}
+	if matrix[floor][dir] != 0 || matrix[floor][elevdriver.NONE] != 0 {
+		fmt.Println("true returned")
+		<-dirEventChan
+		dirEventChan <- elevdriver.NONE
+		return true
+	}else{
+		return false
+	}
+}
+
+
+func OrderAbove(floor int, ordermatrix [4][3]int) bool {
+
+	for floor+=1; floor < 4; floor++{
+		if ordermatrix[floor][elevdriver.NONE] != 0 || ordermatrix[floor][elevdriver.UP] != 0 || ordermatrix[floor][elevdriver.DOWN] != 0{
+			return true
+			}
+	}
+	return false
+
+}
+
+func OrderBelow(floor int, ordermatrix [4][3]int) bool {
+	
+	for floor-=1; floor >= 0; floor--{
+		if ordermatrix[floor][elevdriver.NONE]!=0 || ordermatrix[floor][elevdriver.UP]!=0 || ordermatrix[floor][elevdriver.DOWN]!=0{
+			return true
+			}
+	}
+	return false
+
+}
+
+func GetNextDirection(dirEventChan chan elevdriver.Direction, floorEventChan chan int, orderChan chan[4][3]int) {
+	
+	dir := <- dirEventChan
+	dirEventChan <- dir
+	
+	matrix := <- orderChan
+	orderChan <- matrix
+	
+	floor := <- floorEventChan
+	floorEventChan <- floor
+	
+	switch dir {
+		case elevdriver.NONE:
+			if OrderBelow(floor, matrix) {
+				<-dirEventChan
+				dirEventChan <- elevdriver.DOWN
+				
+			}
+			if OrderAbove(floor, matrix) {
+				<-dirEventChan
+				dirEventChan <- elevdriver.UP
+				
+			}
+		case elevdriver.UP:
+			if OrderAbove(floor, matrix) {
+				<-dirEventChan
+				dirEventChan <- elevdriver.UP
+				
+			}
+			if OrderBelow(floor, matrix) {
+				<-dirEventChan
+				dirEventChan <- elevdriver.DOWN
+				
+			}
+		case elevdriver.DOWN:
+			if OrderBelow(floor, matrix) {
+				<-dirEventChan
+				dirEventChan <- elevdriver.DOWN
+				
+			}
+			if OrderAbove(floor, matrix) {
+				<-dirEventChan
+				dirEventChan <- elevdriver.UP
+				
+			}
+
+	}
+	
+}
+
+func HandleOrder(buttonEventChan chan elevdriver.Button, orderchan chan [4][3]int){
+   /*
+   Provide neccesary order-handling based on information from elevdriver via channels.
+   communication? 
+   */
+		for{
+			fmt.Println("In handleOrder")
+			time.Sleep(25*time.Millisecond)
+			
+			button := <- buttonEventChan
+			buttonEventChan <- button
+			
+			// Set lights
+			elevdriver.SetButtonLight(button.Floor, button.Dir, elevdriver.ON)
+			
+			// Push ordermatrix back to orderchan
+			ordermatrix := <- orderchan
+			orderchan <- ordermatrix
+			ordermatrix[button.Floor - 1][button.Dir] = 1
+			fmt.Println(ordermatrix)
+			orderchan <- ordermatrix
+			toemptybuttonChan := <- buttonEventChan
+			
+			fmt.Println("trykket:  ", toemptybuttonChan)
+		}
+			//UdpButtonSender(button, con_udp)
+			//UdpButtonReciver(buttonEventChan)
+	
+}
+
+
+
+
+
+
+
+
+
+
+
+
