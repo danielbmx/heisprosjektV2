@@ -14,30 +14,38 @@ func main(){
 	// Create all neccesary channels:
 	ButtonEventChan 	:= make(chan elevator.Button)
 	FloorEventChan 		:= make(chan int)
+	InitFloorChan       := make(chan int)
 	DirEventChan 		:= make(chan elevator.Direction)
 
 	SetLightChan 		:= make(chan elevator.SetLightFromOrder)
 	BtnPanelToOrderChan := make(chan elevator.Button)
+	
+	//LocalClientChan     := make(chan elevator.LocalClient)
 	//BtnFromNetworkChan	:= make(chan elevator.Button)
 	
 	//OrderChan	 		:= make(chan [4][3]int)
-	//OrderToFSMChan		:= make(chan elevator.OrderToFSM)
+	OrderToFSMChan		:= make(chan elevator.OrderToFSM)
 
 
 
 	//elevator.InitOrderMatrix(networkmodule.OrderChan)
    	
-	//go elevator.UpdateState()
+	
 	
 	//go ordersystem.OrderHandler(elevator.ButtonEventChan, networkmodule.OrderChan)
 
-	elevator.Init(ButtonEventChan, FloorEventChan, DirEventChan)
+	elevator.Init(ButtonEventChan, FloorEventChan, InitFloorChan)
 
 	go elevator.PanelHandler(ButtonEventChan, SetLightChan, BtnPanelToOrderChan)
 	
-	go ordersystem.OrderHandler(BtnPanelToOrderChan)
+	go elevator.OrderHandler(BtnPanelToOrderChan, SetLightChan,OrderToFSMChan)
 
-
+    go elevator.UpdateState(FloorEventChan, OrderToFSMChan)
+    
+    
+    //OrderMatrix := elevator.InitOrderMatrix()
+    
+    //fmt.Println("OrderMatrix: ", OrderMatrix)
 
 
 

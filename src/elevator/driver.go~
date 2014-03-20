@@ -32,7 +32,7 @@ const MAX_SPEED = 3000
 const MIN_SPEED = 2048
 
 // Initialize system and drive car down to closest floor
-func Init (buttonEventChan chan Button, floorEventChan chan int, dirEventChan chan Direction){
+func Init (buttonEventChan chan Button, floorEventChan chan int, initFloorChan chan int){
 
     // Check if hardware can be initialized:
     val := IoInit()
@@ -47,48 +47,30 @@ func Init (buttonEventChan chan Button, floorEventChan chan int, dirEventChan ch
     
     SetMotorDir(NONE)
 
-	//floorEventChan <- -1
-
-
 
 	fmt.Println("start poller")
-   	Poller(buttonEventChan, floorEventChan)
-    fmt.Println("floorEventChan <- -1")           
-
+   	Poller(buttonEventChan, floorEventChan, initFloorChan)
     
-    if <-floorEventChan != -1 {
-    	dirEventChan <- NONE
-    	fmt.Println("Already at some floor")
-    	return
+    for{
+        time.Sleep(25*time.Millisecond)
+        select{
+            case <- initFloorChan:
+                fmt.Println("get floor")
+                ElevatorStop(DOWN)
+                fmt.Println("Out of init()")
+                return
+            default:
+                //fmt.Println("default")
+                SetMotorDir(DOWN)
+        }
     }
-    
-    // Drive down to nearest floor and stop
-    for <-floorEventChan == -1{
-    	fmt.Println("driving to nearest floor")
-    	time.Sleep(25*time.Millisecond)
-    	SetMotorDir(DOWN)  
-    		
-    }
-    
-    
-    ElevatorStop(DOWN)
- 
-    // Initialize FSM variables:
-    //last_floor:=<-floorEventChan
-
-	// Not neccesary to initialize value in channel, already initalized to NONE?
-    //dirEventChan <- NONE
-	
-    //currentState := STANDSTILL
-    //event := NOEVENT
-    fmt.Println("Out of init()")
-    
 }
 
 
 // Polling channels every 50 ms
 func Poller(buttonEventChan         chan Button,
-            floorEventChan          chan int) {
+            floorEventChan          chan int,
+            initFloorChan           chan int) {
 	
 	
     var floorMap = map[int] int {
@@ -128,17 +110,23 @@ func Poller(buttonEventChan         chan Button,
 
 
     go func(){
-    
+        initCounter := 0
         for {
             time.Sleep(25*time.Millisecond)
             
             for key, floor := range floorMap {
                 newValue := Read_bit(key)
-                if newValue != floorList[key] {
+                if newValue != floorList[key]  &&  newValue = true {
                     newFloor := floor
+                    
+                    for initCounter < 1 {
+                        initFloorChan <- newFloor
+                        initCounter++
+                    }
+                    
+                    
                     floorEventChan <- newFloor
-                }else{
-                	floorEventChan <- -1
+                
                 }
                 floorList[key] = newValue
             }

@@ -4,15 +4,14 @@ package elevator
 
 import (
 		"time"
-		//"fmt"		
+		"fmt"		
 )
 
 
 // States
 type State int
 const (
-    INVALID State = iota
-    MOVING
+    MOVING State = iota
     STANDSTILL
     //EMG_STOPPED
     N_STATES
@@ -21,151 +20,193 @@ const (
 // Events
 type Event int
 const(
-	INITIALIZE = iota
-	NOEVENT
+	NOEVENT  = iota
 	MOVE
 	HALT
 	//EMGSTOP
 	N_EVENTS
 )
 
+type LocalClient struct {
+    currentState State
+    currentDir Direction
+	orderedFloor int
+	Floor int
+	orderedBtnDir Direction
+	IpAddr string
+
+}
 
 // Private variables:
 
 var timeStart time.Time
-var currentState State = INVALID
-var direction Direction
+
 var event Event
+
+var localClient = LocalClient{STANDSTILL,NONE,-1,-1,-1," "}
+//localClient.currentState = STANDSTILL
+//localClient.currentDir   = NONE
+
+//var readOrder OrderToFSM
 //var last_floor = make(chan int, 1)
 
-/*
+var OrderMatrix = InitOrderMatrix()
+var doorClose chan bool
+
+func timeAfter(ch chan bool, t time.Duration){
+    time.Sleep(t)
+    ch <- true
+}
 
 // Statemachine:
-func UpdateState() { 
+func UpdateState(floorEventChan <-chan int, OrderToFSMChan <-chan OrderToFSM) {  // , LocalClientChan chan<- LocalClient
+   
+
+    /*go func(){
+        for {
+            time.Sleep(10*time.Millisecond)
+            localClient.Floor = <- floorEventChan 
+            fmt.Println("thread, Floor: ",localClient.Floor)
+        }
+    }()*/
+
 	for {
 
-		time.Sleep(10*time.Millisecond)
+		var event Event
+		stateHasChanged := make(chan bool, 10)
+		doorClose = make(chan bool)
+		
+		// Read order(s) from ordersystem:
+		fmt.Println("Selecting new event...")
+		select {
+		case readOrder := <- OrderToFSMChan:
+    		fmt.Println("Event: FSM: order read: ", readOrder)
+		    OrderMatrix = SaveOrder(readOrder, OrderMatrix)
+		    fmt.Println("Event: FSM: ordermatrix: ", OrderMatrix)
+            if OrderAbove(localClient.Floor, OrderMatrix) || OrderBelow(localClient.Floor, OrderMatrix){
+                event = MOVE
+            }
+		    
+		case newFloor := <- floorEventChan:
+		    fmt.Println("Event: Arrived at new floor: ", newFloor)
+		    localClient.Floor = newFloor
+		    if StopAtFloor(localClient.currentDir, localClient.Floor, OrderMatrix) {
+		        event = HALT
+		    }
+//		case event = <- GetNextEvent(localClient.currentState, localClient.currentDir, localClient.Floor, OrderMatrix):
+		case <- stateHasChanged:
+		    fmt.Println("Event: State has changed")
+	    case <- doorClose:
+	        fmt.Println("Event: Door close")
+	        SetDoorOpenLight(OFF)
+//		case <- time.After(10*time.Millisecond):
+		}
+//		fmt.Println("FSM: order read: ", readOrder)
+		
+		
 
-		event := GetNextEvent(currentState, DirEventChan, FloorEventChan, ordersystem.OrderChannel)
-		//fmt.Println("State:", currentState, "  Event:", event)
-		switch currentState {
-		    
-		    case INVALID:
-		         switch event {
-		            case INITIALIZE:
-		                Init(ButtonEventChan, FloorEventChan, DirEventChan)
-		                currentState = STANDSTILL
-		                fmt.Println("UpdateState: INVALID-INITIALIZE")
-		            case NOEVENT:
-		                break 
-		            case MOVE:
-		                break 
-		            case HALT:
-		                break 
-		                }
-		    
+		
+//		OrderMatrix = SaveOrder(readOrder, OrderMatrix)
+//		fmt.Println("FSM: ordermatrix: ", OrderMatrix)
+
+ 
+//		event := GetNextEvent(localClient.currentState, localClient.currentDir, localClient.Floor, OrderMatrix)
+		fmt.Println("State:", localClient.currentState, "  Event:", event)
+		
+		fmt.Println("FSM: Floor: ", localClient.Floor, "  Dir: ", localClient.currentDir)
+		switch localClient.currentState {
+		
 		    case MOVING:
 		        switch event {
-		            case INITIALIZE:
-		                break
 		            case NOEVENT:
 		                break 
 		            case MOVE:
 		                break 
 		            case HALT:
-		                
 		                //Stop car
-		                //Setmot
 		                //Open door for 3 sec
 		                //Delete this order from queue HAPPENS IN ORDERSYSTEM!
-		                //current state = STANDSTILL
+
 		                fmt.Println("UpdateState: In HALT")
-		                ElevatorStop(UP)
+		                ElevatorStop(localClient.currentDir)
 		                SetDoorOpenLight(ON)
-		                timeStart = time.Now()
-		                currentState = STANDSTILL
-		                }
+                		go timeAfter(doorClose, 3*time.Second)
+		                //timeStart = time.Now()
+
+		                localClient.currentState = STANDSTILL
+		                stateHasChanged <- true
+		                localClient.currentDir = NONE
+                        break
+                }
+                break      
+                
 		                
 		    case STANDSTILL:
-		        switch event {
-		            
-		            case INITIALIZE:
-		                break
-		            
+		        switch event {		            
 		            case NOEVENT:
 		                //Close door if door has been open for more than 3 sec
+		                /*
 		                closeTime := time.Now()
-		                if closeTime.Sub(timeStart) > 3 {
+		                if closeTime.Sub(timeStart) > 3*time.Second {
 		                    SetDoorOpenLight(OFF)
 		                    }
-		                    
+		                 */   
+		                 break
 		            case MOVE:
+		                fmt.Println("Update state: in state MOVE") 
 		                //move car in right direction
-		                ordersystem.GetNextDirection(DirEventChan, FloorEventChan, ordersystem.OrderChannel)
-		                nextDir := <- DirEventChan
-		                DirEventChan <- nextDir
-		                SetMotorDir(nextDir)
-		                currentState = MOVING
+		                newDir := GetNextDirection(localClient.currentDir, localClient.Floor, OrderMatrix)
+		                fmt.Println(newDir)
+		                SetMotorDir(newDir)
+		                localClient.currentState = MOVING
+		                stateHasChanged <- true
+		                fmt.Println("current state Moving: ", localClient.currentState)
+		                localClient.currentDir = newDir
+		                break
 		            
 		            case HALT:
 		                //Open door
 		                timeStart = time.Now()
 		                SetDoorOpenLight(ON)
+                		go timeAfter(doorClose, 3*time.Second)
+                		break
 		       }		// Delete order
-		}
-		<-FloorEventChan
+    		   break
+		   }	    
 	}
 }
 
 
 // Get next event for statemachine
-func GetNextEvent(currentState State, dirEventChan chan Direction, floorEventChan chan int, orderChan chan[4][3] int) Event { 
+func GetNextEvent(currentState State, dir Direction, floor int, ordermatrix [4][3] int)  Event { 
     //fmt.Println("Inside GetNextEvent")
+    
     switch currentState {
     
-        case INVALID:
-        	return INITIALIZE
-        
         case MOVING:
-        	//fmt.Println("case MOVING")
-        	// if should stop
-        	//return HALT
-
-        	// "Compare"
-        	if ordersystem.StopAtFloor(dirEventChan, floorEventChan, orderChan){
-        		return HALT
-        	}
-
-        	// if shoud continue moving
-        	// return NOEVENT 
-        	return NOEVENT   
+            fmt.Println("GNE: in event moving")
+        	if StopAtFloor(dir, floor, ordermatrix){
+        	    fmt.Println("GNE: getting stop at floor")
+                return HALT
+        	}else{
+        	    return NOEVENT
+        	}  
         
         case STANDSTILL:
-
-        	fmt.Println("GNE: Inside Standstill")
-        	//if order in queue
-        	nextDir := <- DirEventChan
-		    DirEventChan <- nextDir
-		    fmt.Println("GNE: nextDir= ", nextDir)
-		    
-        	if nextDir != NONE {//&& time.Now().Sub(timeStart) > 3 
-				fmt.Println("GNE: getting dir")
-        		return MOVE
+            if OrderAbove(floor, ordermatrix) || OrderBelow(floor, ordermatrix){
+                return MOVE
+            }else{
+                return NOEVENT
+            }        	
         	
-        	}
-        	
-        	// if no order in queue
-        	// return NOEVENT
-
-
 	}
-	fmt.Println("GNE: return NOEVENT")
+	fmt.Println("GNE: default. return NOEVENT")
     return NOEVENT
+
 
 }
 
 
-*/
 
 
 
