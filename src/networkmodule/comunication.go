@@ -21,16 +21,17 @@ func PassOrder() {
 
 */
 
-func NetworkHandler(OrderToNetChan <-chan elevator.Button, BtnFromNetChan <-chan elevator.Button, BtnNetToOrderChan chan<- elevator.Button ) {
+func NetworkHandler(OrderToNetChan <-chan elevator.Button, BtnFromNetChan chan elevator.Button, BtnNetToOrderChan chan<- elevator.Button ) { // 3 
     // Make connections
     BtnPort := "129.241.187.255:20005"
     //AlivePort := "129.241.187.255:20006"
     BtnConnection := UdpConnect(BtnPort)
     //AliveConnection := UdpConnect(AlivePort)
     
-    
+    go UdpButtonReciver(BtnFromNetChan)
     
     for{
+    	
         time.Sleep(25*time.Millisecond)
         select{
             case btnFromOrder := <- OrderToNetChan:

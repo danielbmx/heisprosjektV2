@@ -2,11 +2,9 @@
 package elevator
 
 import (
-	//"fmt"
-	//"net"
+	"fmt"
 	"time"
-	//"../networkmodule"
-	
+
 ) 
 
 // Dummy variable for running only one elevator:
@@ -58,7 +56,7 @@ func CalculateCost(buttonEventChan chan Button, floorEventChan chan int, floorDi
 }
 
 
-*/
+
 
 func GetCost(client ClientStatus,external ClientExternalOrder,command map[string]ClientCommandOrders)int{
 	currentPos:=client.Floor
@@ -82,9 +80,24 @@ func GetCost(client ClientStatus,external ClientExternalOrder,command map[string
 	return penalty
 }
 
+*/
 
-func OrderHandler(BtnPanelToOrderChan <-chan Button, SetLightChan chan<- OrderSetLight, OrderToFSMChan chan<- OrderToFSM, OrderTakenChan <-chan OrderSetLight, OrderToNetChan chan<- Button, BtnNetToOrderChan <-firefox
-chan elevator.Button){ //,buttonEventChan chan Button, orderchan chan [4][3]int, )
+func GetCost(client LocalClient, btn Button) int {
+	
+	temp := client.Floor-btn.Floor
+	if temp < 0 {
+		temp = temp * -1
+	}	
+	
+	penalty := temp
+	
+	return penalty
+	
+}
+
+
+func OrderHandler(BtnPanelToOrderChan <-chan Button, SetLightChan chan<- OrderSetLight, OrderToFSMChan chan<- OrderToFSM, OrderTakenChan <-chan OrderSetLight, OrderToNetChan chan<- Button, BtnNetToOrderChan <-chan Button/*, LocalClientChan <-chan LocalClient*/){ // 7
+
    	/*
    	Provide neccesary order-handling based on information from driver via channels.
    	communication? 
@@ -94,12 +107,21 @@ chan elevator.Button){ //,buttonEventChan chan Button, orderchan chan [4][3]int,
 	
 	var btnFromPanel Button
 	var setBtnToPanel OrderSetLight
-	//var btnFromNetwork Button 
+	var btnFromNetwork Button 
 	var orderToFSM OrderToFSM
-
+	//var localClient LocalClient
+	
 	for{
 		time.Sleep(25*time.Millisecond)
-
+		
+		select{
+			case localClient = <- LocalClientChan:
+				fmt.Println("OrderHandler: localClient: ", localClient)
+			default:
+				continue
+			}
+		
+		fmt.Println("OrderHandler: her")
 		select{
 			// Case 1: Button pressed on own panel
 			case btnFromPanel = <- BtnPanelToOrderChan:
@@ -107,7 +129,6 @@ chan elevator.Button){ //,buttonEventChan chan Button, orderchan chan [4][3]int,
 				
 				// Send order to network module
 				OrderToNetChan <- btnFromPanel
-				
 				
 				// Calculate cost related to taking order:
                 
@@ -127,7 +148,6 @@ chan elevator.Button){ //,buttonEventChan chan Button, orderchan chan [4][3]int,
 					SetLightChan <- setBtnToPanel
 					
 					// tell runElevator to go to that floor.
-					
 					orderToFSM.Floor = btnFromPanel.Floor
 					orderToFSM.Dir = btnFromPanel.Dir
 					OrderToFSMChan <- orderToFSM
@@ -141,20 +161,34 @@ chan elevator.Button){ //,buttonEventChan chan Button, orderchan chan [4][3]int,
 				SetLightChan <- setBtnToPanel
 				    
 
-			/*
+			
 			// Case 2: Order received via network
-			case btnFromNetwork = <- BtnFromNetworkChan:
+			case btnFromNetwork = <- BtnNetToOrderChan:
 				// Calculate cost related to taking order:
 
 				// Compare cost with other elevators:
-			*/
+			
+			
+				// Tell panel to set light on
+				setBtnToPanel.Floor = btnFromNetwork.Floor
+				setBtnToPanel.Dir = btnFromNetwork.Dir
+				setBtnToPanel.Light = ON
+				SetLightChan <- setBtnToPanel
+				
+				// tell runElevator to go to that floor.
+				
+				orderToFSM.Floor = btnFromNetwork.Floor
+				orderToFSM.Dir = btnFromNetwork.Dir
+				OrderToFSMChan <- orderToFSM
+				
 			
 			default:
-				//fmt.Println("HandleOrder: default")
+				fmt.Println("OrderHandler: default")
 				continue
 	
 		}
 	}
+	
 }
 
 

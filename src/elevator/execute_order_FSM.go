@@ -64,15 +64,15 @@ func DeleteOrder(floor int, dir Direction, ordermatrix [4][3]int, orderTakenChan
 
 func StopAtFloor(dir Direction, floor int, ordermatrix [4][3]int) bool {
 	if ordermatrix[floor][dir] != 0 || ordermatrix[floor][NONE] != 0 {
-		fmt.Println("ordre i etasje")
+		//fmt.Println("ordre i etasje")
 		return true
 	}
 	if floor == 0 || floor == 3 {
-	    fmt.Println("På topp / bunn")
+	    //fmt.Println("På topp / bunn")
 	    return true	
 	}
 	if !(OrderAbove(floor, ordermatrix) || OrderBelow(floor, ordermatrix)) {
-	    fmt.Println("Ingen ordre over/under!!!")
+	    //fmt.Println("Ingen ordre over/under!!!")
 	    return true
 	}else{
 		return false

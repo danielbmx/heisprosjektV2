@@ -173,7 +173,7 @@ func SetMotorDir(newDir Direction) {
 
 // SetOrderButtonLight()? Stop is also a button...
 func SetButtonLight(floor int, dir Direction, onoff LightVal) {
-fmt.Println("Setting light: ", floor, dir, onoff)
+//fmt.Println("Setting light: ", floor, dir, onoff)
     switch onoff {
     case ON:
         switch {

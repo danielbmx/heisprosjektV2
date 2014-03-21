@@ -5,6 +5,7 @@ import (
         "./elevator"
         "fmt"
         "time"
+        
 )
 
 func main(){
@@ -21,25 +22,30 @@ func main(){
 	SetLightChan 		:= make(chan elevator.OrderSetLight)
 	BtnPanelToOrderChan := make(chan elevator.Button)
 	
-	//LocalClientChan     := make(chan elevator.LocalClient)
+
 	//BtnFromNetworkChan    := make(chan elevator.Button)
 	
 	//OrderChan	 		:= make(chan [4][3]int)
 	OrderToFSMChan		:= make(chan elevator.OrderToFSM)
 	OrderToNetChan      := make(chan elevator.Button)
 
-
+	BtnFromNetChan		:= make(chan elevator.Button)
+	BtnNetToOrderChan	:= make(chan elevator.Button)
+	
+	//LocalClientChan		:= make(chan elevator.LocalClient)
 
 
 	elevator.Init(ButtonEventChan, FloorEventChan, InitFloorChan)
 
 	go elevator.PanelHandler(ButtonEventChan, SetLightChan, BtnPanelToOrderChan)
 	
-	go elevator.OrderHandler(BtnPanelToOrderChan, SetLightChan, OrderToFSMChan, OrderTakenChan, OrderToNetChan)
+	go elevator.OrderHandler(BtnPanelToOrderChan, SetLightChan, OrderToFSMChan, OrderTakenChan, OrderToNetChan, BtnNetToOrderChan) //, LocalClientChan)
+	
+	go networkmodule.NetworkHandler(OrderToNetChan, BtnFromNetChan, BtnNetToOrderChan)
 
-    go elevator.UpdateState(FloorEventChan, OrderToFSMChan, OrderTakenChan)
+    go elevator.UpdateState(FloorEventChan, OrderToFSMChan, OrderTakenChan) //, LocalClientChan)
     
-    go networkmodule.NetworkHandler(OrderToNetChan)
+   
 
 	//fmt.Println(<-networkmodule.OrderChannel)
 	
