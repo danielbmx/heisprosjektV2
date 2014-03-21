@@ -20,6 +20,35 @@ func PassOrder() {
 }
 
 */
+
+func NetworkHandler(OrderToNetChan <-chan elevator.Button, BtnFromNetChan <-chan elevator.Button, BtnNetToOrderChan chan<- elevator.Button ) {
+    // Make connections
+    BtnPort := "129.241.187.255:20005"
+    //AlivePort := "129.241.187.255:20006"
+    BtnConnection := UdpConnect(BtnPort)
+    //AliveConnection := UdpConnect(AlivePort)
+    
+    
+    
+    for{
+        time.Sleep(25*time.Millisecond)
+        select{
+            case btnFromOrder := <- OrderToNetChan:
+                fmt.Println("btnFromOrder: ", btnFromOrder)
+                // send via UDP to other elevators using the same port
+                UdpButtonSender(btnFromOrder, BtnConnection)
+                
+            case btnFromNet := <- BtnFromNetChan:
+                 // Send to Ordersystem
+                 BtnNetToOrderChan <- btnFromNet
+
+            default:
+                continue
+        }
+    }
+}
+
+
 // Create UDP connection
 func UdpConnect(address string) *net.UDPConn{
 	serverAddr_udp, err := net.ResolveUDPAddr("udp", address)
@@ -64,12 +93,12 @@ func UdpButtonSender(parameter elevator.Button, con_udp *net.UDPConn) {
     message, err := json.Marshal(parameter) 
     PrintError(err)
 	
-	for {
+//	for {
 	fmt.Println("for in udpSender")
-		time.Sleep(1000 * time.Millisecond)
+//		time.Sleep(1000 * time.Millisecond)
 		_, err2 := con_udp.Write(message)
 		PrintError(err2)
-	}
+//	}
 }
 
 func UdpAliveReciver(message_alive chan int) {

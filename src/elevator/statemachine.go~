@@ -20,8 +20,7 @@ const (
 // Events
 type Event int
 const(
-	NOEVENT  = iota
-	MOVE
+	MOVE = iota
 	HALT
 	//EMGSTOP
 	N_EVENTS
@@ -30,10 +29,9 @@ const(
 type LocalClient struct {
     currentState State
     currentDir Direction
-	orderedFloor int
 	Floor int
-	orderedBtnDir Direction
-	IpAddr string
+	//orderedBtn Button
+	//IpAddr string
 
 }
 
@@ -43,7 +41,7 @@ var timeStart time.Time
 
 var event Event
 
-var localClient = LocalClient{STANDSTILL,NONE,-1,-1,-1," "}
+var localClient = LocalClient{STANDSTILL,NONE,-1}//,{0, NONE} ," "}
 //localClient.currentState = STANDSTILL
 //localClient.currentDir   = NONE
 
@@ -56,11 +54,15 @@ var doorClose chan bool
 func timeAfter(ch chan bool, t time.Duration){
     time.Sleep(t)
     ch <- true
+    fmt.Println("timer event has passed")
 }
 
 // Statemachine:
-func UpdateState(floorEventChan <-chan int, OrderToFSMChan <-chan OrderToFSM) {  // , LocalClientChan chan<- LocalClient
-   
+func UpdateState(floorEventChan <-chan int, OrderToFSMChan <-chan OrderToFSM, OrderTakenChan chan<- OrderSetLight) {  // , LocalClientChan chan<- LocalClient
+		var event Event
+		stateHasChanged := make(chan bool, 10)
+		doorClose = make(chan bool, 2)
+		//var DeleteLight OrderSetLight   
 
     /*go func(){
         for {
@@ -72,40 +74,55 @@ func UpdateState(floorEventChan <-chan int, OrderToFSMChan <-chan OrderToFSM) { 
 
 	for {
 
-		var event Event
-		stateHasChanged := make(chan bool, 10)
-		doorClose = make(chan bool)
+
 		
 		// Read order(s) from ordersystem:
 		fmt.Println("Selecting new event...")
 		select {
-		case readOrder := <- OrderToFSMChan:
-    		fmt.Println("Event: FSM: order read: ", readOrder)
-		    OrderMatrix = SaveOrder(readOrder, OrderMatrix)
-		    fmt.Println("Event: FSM: ordermatrix: ", OrderMatrix)
-            if OrderAbove(localClient.Floor, OrderMatrix) || OrderBelow(localClient.Floor, OrderMatrix){
-                event = MOVE
-            }
-		    
-		case newFloor := <- floorEventChan:
-		    fmt.Println("Event: Arrived at new floor: ", newFloor)
-		    localClient.Floor = newFloor
-		    if StopAtFloor(localClient.currentDir, localClient.Floor, OrderMatrix) {
-		        event = HALT
-		    }
-//		case event = <- GetNextEvent(localClient.currentState, localClient.currentDir, localClient.Floor, OrderMatrix):
-		case <- stateHasChanged:
-		    fmt.Println("Event: State has changed")
-	    case <- doorClose:
-	        fmt.Println("Event: Door close")
-	        SetDoorOpenLight(OFF)
+		    case readOrder := <- OrderToFSMChan:
+        		fmt.Println("Event: FSM: order read: ", readOrder)
+        		// Order saved in ordermatrix
+		        OrderMatrix = SaveOrder(readOrder, OrderMatrix)
+		        fmt.Println("Event: FSM: ordermatrix: ", OrderMatrix)
+                if OrderAbove(localClient.Floor, OrderMatrix) || OrderBelow(localClient.Floor, OrderMatrix){
+                    event = MOVE
+                }
+		        
+		    case newFloor := <- floorEventChan:
+		        fmt.Println("Event: Arrived at new floor: ", newFloor)
+		        localClient.Floor = newFloor
+		        if StopAtFloor(localClient.currentDir, localClient.Floor, OrderMatrix) {
+		            
+		            event = HALT
+		            
+
+		            /*
+		            // Turn off light(s)
+		            DeleteLight.Floor = localClient.Floor
+		            DeleteLight.Dir = localClient.currentDir
+		            DeleteLight.Light = OFF
+		            OrderTakenChan <- DeleteLight
+		            */
+		            // Delete order from ordermatrix
+		            fmt.Println("Sletter ordre")
+		            OrderMatrix = DeleteOrder(localClient.Floor, localClient.currentDir, OrderMatrix, OrderTakenChan)
+		            fmt.Println(OrderMatrix)
+		        }
+    //		case event = <- GetNextEvent(localClient.currentState, localClient.currentDir, localClient.Floor, OrderMatrix):
+		    case <- stateHasChanged:
+		        fmt.Println("Event: State has changed")
+	        case <- doorClose:
+	            fmt.Println("Event: Door close")
+	            SetDoorOpenLight(OFF)
+	            newDir := GetNextDirection(localClient.currentDir, localClient.Floor, OrderMatrix)
+	            if newDir != NONE {
+	                event = MOVE
+	            }
 //		case <- time.After(10*time.Millisecond):
-		}
+		    }
 //		fmt.Println("FSM: order read: ", readOrder)
 		
-		
 
-		
 //		OrderMatrix = SaveOrder(readOrder, OrderMatrix)
 //		fmt.Println("FSM: ordermatrix: ", OrderMatrix)
 
@@ -118,8 +135,6 @@ func UpdateState(floorEventChan <-chan int, OrderToFSMChan <-chan OrderToFSM) { 
 		
 		    case MOVING:
 		        switch event {
-		            case NOEVENT:
-		                break 
 		            case MOVE:
 		                break 
 		            case HALT:
@@ -139,19 +154,10 @@ func UpdateState(floorEventChan <-chan int, OrderToFSMChan <-chan OrderToFSM) { 
                         break
                 }
                 break      
-                
-		                
+                       
 		    case STANDSTILL:
 		        switch event {		            
-		            case NOEVENT:
-		                //Close door if door has been open for more than 3 sec
-		                /*
-		                closeTime := time.Now()
-		                if closeTime.Sub(timeStart) > 3*time.Second {
-		                    SetDoorOpenLight(OFF)
-		                    }
-		                 */   
-		                 break
+
 		            case MOVE:
 		                fmt.Println("Update state: in state MOVE") 
 		                //move car in right direction
@@ -165,10 +171,17 @@ func UpdateState(floorEventChan <-chan int, OrderToFSMChan <-chan OrderToFSM) { 
 		                break
 		            
 		            case HALT:
+		                /*
+		                fmt.Println("in halt")
+		                if OrderMatrix[localClient.Floor][UP] != 0 || OrderMatrix[localClient.Floor][DOWN] != 0{
+		                    SetDoorOpenLight(ON)
+		                    go timeAfter(doorClose, 3*time.Second)
+		                }*/
 		                //Open door
-		                timeStart = time.Now()
-		                SetDoorOpenLight(ON)
-                		go timeAfter(doorClose, 3*time.Second)
+		                //timeStart = time.Now()
+		                //SetDoorOpenLight(ON)
+		                //fmt.Println("Starter doortimer :-)")
+                		//go timeAfter(doorClose, 3*time.Second)
                 		break
 		       }		// Delete order
     		   break
@@ -176,7 +189,7 @@ func UpdateState(floorEventChan <-chan int, OrderToFSMChan <-chan OrderToFSM) { 
 	}
 }
 
-
+/*
 // Get next event for statemachine
 func GetNextEvent(currentState State, dir Direction, floor int, ordermatrix [4][3] int)  Event { 
     //fmt.Println("Inside GetNextEvent")
@@ -208,7 +221,7 @@ func GetNextEvent(currentState State, dir Direction, floor int, ordermatrix [4][
 
 
 
-
+*/
 
 
 

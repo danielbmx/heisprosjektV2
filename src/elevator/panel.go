@@ -7,10 +7,10 @@ import(
 		"fmt"
 		)
 
-func PanelHandler(buttonEventChan <-chan Button, setLightChan <-chan SetLightFromOrder, btnPanelToOrder chan<- Button) {
+func PanelHandler(buttonEventChan <-chan Button, setLightChan <-chan OrderSetLight, btnPanelToOrder chan<- Button) {
 	fmt.Println("PanelHandler running")
 	var passOn Button
-	var setLight SetLightFromOrder
+	var setLight OrderSetLight
 	
 	for{
 		select{

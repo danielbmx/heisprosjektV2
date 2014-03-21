@@ -25,24 +25,41 @@ func InitOrderMatrix() [4][3]int {
 func SaveOrder(readorder OrderToFSM, ordermatrix [4][3]int) [4][3]int{
 	
 	//time.Sleep(50*time.Millisecond)
-	ordermatrix[readorder.Floor/* - 1*/][readorder.Dir] = 1
+	ordermatrix[readorder.Floor][readorder.Dir] = 1
     return ordermatrix
 }
 
-// Her har Kristine begynt å rette opp ifra! Se over det!
 
-func DeleteOrder(readorder OrderToFSM, ordermatrix [4][3]int) [4][3]int{
-   ordermatrix[readorder.Floor/* - 1*/][readorder.Dir] = 0
+func DeleteOrder(floor int, dir Direction, ordermatrix [4][3]int) [4][3]int{
+   ordermatrix[floor][dir] = 0
+   ordermatrix[floor][NONE] = 0
+   switch dir{
+       case UP:
+            if !OrderAbove(floor, ordermatrix) {
+                ordermatrix[floor][DOWN] = 0
+            }
+       case DOWN:
+            if !OrderBelow(floor, ordermatrix) {
+                ordermatrix[floor][UP] = 0
+            }    
+   }
    return ordermatrix
 }
 
 
 
 func StopAtFloor(dir Direction, floor int, ordermatrix [4][3]int) bool {
-	
-	if ordermatrix[floor/* - 1*/][dir] != 0 || ordermatrix[floor/* - 1*/][NONE] != 0 {
-		fmt.Println("true returned")
+	if ordermatrix[floor][dir] != 0 || ordermatrix[floor][NONE] != 0 {
+		fmt.Println("ordre i etasje")
 		return true
+	}
+	if floor == 0 || floor == 3 {
+	    fmt.Println("På topp / bunn")
+	    return true	
+	}
+	if !(OrderAbove(floor, ordermatrix) || OrderBelow(floor, ordermatrix)) {
+	    fmt.Println("Ingen ordre over/under!!!")
+	    return true
 	}else{
 		return false
 	}
@@ -76,29 +93,29 @@ func GetNextDirection(dir Direction, floor int, ordermatrix [4][3]int) Direction
 	switch dir {
 		case NONE:
 			if OrderBelow(floor, ordermatrix) {
-			    fmt.Println("gnd1")
+			    fmt.Println("NONE -> DOWN")
 				return DOWN
 			}
 			if OrderAbove(floor, ordermatrix) {
-			    fmt.Println("gnd2")
+			    fmt.Println("NONE -> UP")
 				return UP
 			}
 		case UP:
 			if OrderAbove(floor, ordermatrix) {
-			    fmt.Println("gnd3")
+			    fmt.Println("UP -> UP")
 				return UP
 			}
 			if OrderBelow(floor, ordermatrix) {
-			    fmt.Println("gnd4")
+			    fmt.Println("UP -> DOWN")
 				return DOWN
 			}
 		case DOWN:
 			if OrderBelow(floor, ordermatrix) {
-			    fmt.Println("gnd5")
+			    fmt.Println("DOWN -> DOWN")
 				return DOWN
 			}
 			if OrderAbove(floor, ordermatrix) {
-			    fmt.Println("gnd6")
+			    fmt.Println("DOWN -> UP")
 				return UP
 			}
 		}

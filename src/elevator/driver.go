@@ -81,16 +81,16 @@ func Poller(buttonEventChan         chan Button,
     }
 
     var buttonMap = map[int] Button {
-        FLOOR_COMMAND1 : { 1, NONE },
-        FLOOR_COMMAND2 : { 2, NONE },
-        FLOOR_COMMAND3 : { 3, NONE },
-        FLOOR_COMMAND4 : { 4, NONE },
-        FLOOR_UP1      : { 1,   UP },
-        FLOOR_UP2      : { 2,   UP },
-        FLOOR_UP3      : { 3,   UP },
-        FLOOR_DOWN2    : { 2, DOWN },
-        FLOOR_DOWN3    : { 3, DOWN },
-        FLOOR_DOWN4    : { 4, DOWN },
+        FLOOR_COMMAND1 : { 0, NONE },
+        FLOOR_COMMAND2 : { 1, NONE },
+        FLOOR_COMMAND3 : { 2, NONE },
+        FLOOR_COMMAND4 : { 3, NONE },
+        FLOOR_UP1      : { 0,   UP },
+        FLOOR_UP2      : { 1,   UP },
+        FLOOR_UP3      : { 2,   UP },
+        FLOOR_DOWN2    : { 1, DOWN },
+        FLOOR_DOWN3    : { 2, DOWN },
+        FLOOR_DOWN4    : { 3, DOWN },
     }
 
 
@@ -173,51 +173,53 @@ func SetMotorDir(newDir Direction) {
 
 // SetOrderButtonLight()? Stop is also a button...
 func SetButtonLight(floor int, dir Direction, onoff LightVal) {
+fmt.Println("Setting light: ", floor, dir, onoff)
     switch onoff {
     case ON:
         switch {
-        case    floor == 1 && dir == NONE:
+        case    floor == 0 && dir == NONE:
                 Set_bit(LIGHT_COMMAND1)
-        case    floor == 2 && dir == NONE:
+        case    floor == 1 && dir == NONE:
                 Set_bit(LIGHT_COMMAND2)
-        case    floor == 3 && dir == NONE:
+        case    floor == 2 && dir == NONE:
                 Set_bit(LIGHT_COMMAND3)
-        case    floor == 4 && dir == NONE:
+        case    floor == 3 && dir == NONE:
                 Set_bit(LIGHT_COMMAND4)
-        case    floor == 1 && dir == UP:
+        case    floor == 0 && dir == UP:
                 Set_bit(LIGHT_UP1)
-        case    floor == 2 && dir == UP:
+        case    floor == 1 && dir == UP:
                 Set_bit(LIGHT_UP2)
-        case    floor == 3 && dir == UP:
+
+        case    floor == 2 && dir == UP:
                 Set_bit(LIGHT_UP3)
-        case    floor == 2 && dir == DOWN:
+        case    floor == 1 && dir == DOWN:
                 Set_bit(LIGHT_DOWN2)
-        case    floor == 3 && dir == DOWN:
+        case    floor == 2 && dir == DOWN:
                 Set_bit(LIGHT_DOWN3)
-        case    floor == 4 && dir == DOWN:
+        case    floor == 3 && dir == DOWN:
                 Set_bit(LIGHT_DOWN4)
         }
     case OFF:
         switch {
-        case    floor == 1 && dir == NONE:
+        case    floor == 0 && dir == NONE:
                 Clear_bit(LIGHT_COMMAND1)
-        case    floor == 2 && dir == NONE:
+        case    floor == 1 && dir == NONE:
                 Clear_bit(LIGHT_COMMAND2)
-        case    floor == 3 && dir == NONE:
+        case    floor == 2 && dir == NONE:
                 Clear_bit(LIGHT_COMMAND3)
-        case    floor == 4 && dir == NONE:
+        case    floor == 3 && dir == NONE:
                 Clear_bit(LIGHT_COMMAND4)
-        case    floor == 1 && dir == UP:
+        case    floor == 0 && dir == UP:
                 Clear_bit(LIGHT_UP1)
-        case    floor == 2 && dir == UP:
+        case    floor == 1 && dir == UP:
                 Clear_bit(LIGHT_UP2)
-        case    floor == 3 && dir == UP:
+        case    floor == 2 && dir == UP:
                 Clear_bit(LIGHT_UP3)
-        case    floor == 2 && dir == DOWN:
+        case    floor == 1 && dir == DOWN:
                 Clear_bit(LIGHT_DOWN2)
-        case    floor == 3 && dir == DOWN:
+        case    floor == 2 && dir == DOWN:
                 Clear_bit(LIGHT_DOWN3)
-        case    floor == 4 && dir == DOWN:
+        case    floor == 3 && dir == DOWN:
                 Clear_bit(LIGHT_DOWN4)
         }
     }
@@ -226,16 +228,16 @@ func SetButtonLight(floor int, dir Direction, onoff LightVal) {
 // Setting floor light
 func SetFloorLight(floor int) {
     switch floor {
+    case 0:
+        Clear_bit (FLOOR_IND1)
+        Clear_bit (FLOOR_IND2)
     case 1:
         Clear_bit (FLOOR_IND1)
-        Clear_bit (FLOOR_IND2)
-    case 2:
-        Clear_bit (FLOOR_IND1)
         Set_bit   (FLOOR_IND2)
-    case 3:
+    case 2:
         Set_bit   (FLOOR_IND1)
         Clear_bit (FLOOR_IND2)
-    case 4:
+    case 3:
         Set_bit   (FLOOR_IND1)
         Set_bit   (FLOOR_IND2)
     }
@@ -280,7 +282,7 @@ func ElevatorStop(direction Direction) {
 // clear buttons:
 func ClearButtons() {
 	SetDoorOpenLight(OFF)
-	for i := 1; i < 5; i++ {
+	for i := 0; i < 4; i++ {
 		SetButtonLight(i, NONE, OFF)
 		SetButtonLight(i, UP, OFF)
 		SetButtonLight(i, DOWN, OFF)

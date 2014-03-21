@@ -12,7 +12,7 @@ import (
 // Dummy variable for running only one elevator:
 var takeOrder bool = true
 
-type SetLightFromOrder struct {
+type OrderSetLight struct {
     Floor int
     Dir Direction
 	Light LightVal
@@ -57,9 +57,34 @@ func CalculateCost(buttonEventChan chan Button, floorEventChan chan int, floorDi
 	return score
 }
 
+
 */
 
-func OrderHandler(BtnPanelToOrderChan <-chan Button, SetLightChan chan<- SetLightFromOrder, OrderToFSMChan chan<- OrderToFSM){ //,buttonEventChan chan Button, orderchan chan [4][3]int, )
+func GetCost(client ClientStatus,external ClientExternalOrder,command map[string]ClientCommandOrders)int{
+	currentPos:=client.Floor
+	OrderedPos:=external.Floor
+	penalty := abs(client.Floor-external.Floor)
+	if(client.Direction == "STOP"){
+		return penalty
+	}
+	for k,v:=range command{
+		if(k==client.IP){
+			if(v.HasCommandOrder && v.Floor==currentPos){
+				penalty+=1
+			}
+		
+		}
+		currentPos+=1
+		if(currentPos==OrderedPos){
+			break
+		}
+	}
+	return penalty
+}
+
+
+func OrderHandler(BtnPanelToOrderChan <-chan Button, SetLightChan chan<- OrderSetLight, OrderToFSMChan chan<- OrderToFSM, OrderTakenChan <-chan OrderSetLight, OrderToNetChan chan<- Button, BtnNetToOrderChan <-firefox
+chan elevator.Button){ //,buttonEventChan chan Button, orderchan chan [4][3]int, )
    	/*
    	Provide neccesary order-handling based on information from driver via channels.
    	communication? 
@@ -68,19 +93,24 @@ func OrderHandler(BtnPanelToOrderChan <-chan Button, SetLightChan chan<- SetLigh
    	*/
 	
 	var btnFromPanel Button
-	var setBtnToPanel SetLightFromOrder
+	var setBtnToPanel OrderSetLight
 	//var btnFromNetwork Button 
 	var orderToFSM OrderToFSM
 
 	for{
-		//time.Sleep(25*time.Millisecond)
+		time.Sleep(25*time.Millisecond)
 
 		select{
 			// Case 1: Button pressed on own panel
 			case btnFromPanel = <- BtnPanelToOrderChan:
 				//fmt.Println("btnFromPanel Button", btnFromPanel)
+				
+				// Send order to network module
+				OrderToNetChan <- btnFromPanel
+				
+				
 				// Calculate cost related to taking order:
-
+                
 				// Compare cost with other elevators:
 				
 				// If should take order, tell statemachine and other participants
@@ -103,6 +133,13 @@ func OrderHandler(BtnPanelToOrderChan <-chan Button, SetLightChan chan<- SetLigh
 					OrderToFSMChan <- orderToFSM
 
 				}
+				
+			case DeleteOrder := <- OrderTakenChan:
+			    setBtnToPanel.Floor = DeleteOrder.Floor
+				setBtnToPanel.Dir = DeleteOrder.Dir
+				setBtnToPanel.Light = DeleteOrder.Light
+				SetLightChan <- setBtnToPanel
+				    
 
 			/*
 			// Case 2: Order received via network
@@ -112,9 +149,9 @@ func OrderHandler(BtnPanelToOrderChan <-chan Button, SetLightChan chan<- SetLigh
 				// Compare cost with other elevators:
 			*/
 			
-			//default:
+			default:
 				//fmt.Println("HandleOrder: default")
-				//continue
+				continue
 	
 		}
 	}

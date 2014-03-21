@@ -20,6 +20,35 @@ func PassOrder() {
 }
 
 */
+
+func NetworkHandler(OrderToNetChan <-chan elevator.Button, BtnFromNetChan <-chan elevator.Button, BtnNetToOrderChan chan<- elevator.Button ) {
+    // Make connections
+    BtnPort := "129.241.187.255:20005"
+    //AlivePort := "129.241.187.255:20006"
+    BtnConnection := UdpConnect(BtnPort)
+    //AliveConnection := UdpConnect(AlivePort)
+    
+    
+    
+    for{
+        time.Sleep(25*time.Millisecond)
+        select{
+            case btnFromOrder := <- OrderToNetChan:
+                fmt.Println("btnFromOrder: ", btnFromOrder)
+                // send via UDP to other elevators using the same port
+                UdpButtonSender(btnFromOrder, BtnConnection)
+                
+            case btnFromNet := <- BtnFromNetChan:
+                 // Send to Ordersystem
+                 BtnNetToOrderChan <- btnFromNet
+
+            default:
+                continue
+        }
+    }
+}
+
+
 // Create UDP connection
 func UdpConnect(address string) *net.UDPConn{
 	serverAddr_udp, err := net.ResolveUDPAddr("udp", address)
@@ -33,14 +62,14 @@ func UdpConnect(address string) *net.UDPConn{
 
 
 // Recieve message via UDP
-func UdpButtonReciver(message_channel chan driver.Button) {
+func UdpButtonReciver(message_channel chan elevator.Button) {
     
     serverAddr_udp, err := net.ResolveUDPAddr("udp", ":20005")
 	PrintError(err)
 
     con_udp, err := net.ListenUDP("udp", serverAddr_udp)
     PrintError(err)
-    save := driver.Button{} 
+    save := elevator.Button{} 
     buffer := make([]byte,1024)
 	//connection, err := net.ListenUDP("udp", UDP_addr)
 	//PrintError(err)
@@ -59,17 +88,17 @@ func UdpButtonReciver(message_channel chan driver.Button) {
 
 
 // Broadcast message via UDP using Json
-func UdpButtonSender(parameter driver.Button, con_udp *net.UDPConn) {
+func UdpButtonSender(parameter elevator.Button, con_udp *net.UDPConn) {
     fmt.Println("in udpSender")
     message, err := json.Marshal(parameter) 
     PrintError(err)
 	
-	for {
+//	for {
 	fmt.Println("for in udpSender")
-		time.Sleep(1000 * time.Millisecond)
+//		time.Sleep(1000 * time.Millisecond)
 		_, err2 := con_udp.Write(message)
 		PrintError(err2)
-	}
+//	}
 }
 
 func UdpAliveReciver(message_alive chan int) {

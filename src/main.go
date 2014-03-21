@@ -1,7 +1,7 @@
 package main
 
 import (
-		//"./networkmodule"
+		"./networkmodule"
         "./elevator"
         "fmt"
         "time"
@@ -15,39 +15,31 @@ func main(){
 	ButtonEventChan 	:= make(chan elevator.Button)
 	FloorEventChan 		:= make(chan int)
 	InitFloorChan       := make(chan int)
-	//DirEventChan 		:= make(chan elevator.Direction)
+	
+	OrderTakenChan      := make(chan elevator.OrderSetLight)
 
-	SetLightChan 		:= make(chan elevator.SetLightFromOrder)
+	SetLightChan 		:= make(chan elevator.OrderSetLight)
 	BtnPanelToOrderChan := make(chan elevator.Button)
 	
 	//LocalClientChan     := make(chan elevator.LocalClient)
-	//BtnFromNetworkChan	:= make(chan elevator.Button)
+	//BtnFromNetworkChan    := make(chan elevator.Button)
 	
 	//OrderChan	 		:= make(chan [4][3]int)
 	OrderToFSMChan		:= make(chan elevator.OrderToFSM)
+	OrderToNetChan      := make(chan elevator.Button)
 
 
 
-	//elevator.InitOrderMatrix(networkmodule.OrderChan)
-   	
-	
-	
-	//go ordersystem.OrderHandler(elevator.ButtonEventChan, networkmodule.OrderChan)
 
 	elevator.Init(ButtonEventChan, FloorEventChan, InitFloorChan)
 
 	go elevator.PanelHandler(ButtonEventChan, SetLightChan, BtnPanelToOrderChan)
 	
-	go elevator.OrderHandler(BtnPanelToOrderChan, SetLightChan,OrderToFSMChan)
+	go elevator.OrderHandler(BtnPanelToOrderChan, SetLightChan, OrderToFSMChan, OrderTakenChan, OrderToNetChan)
 
-    go elevator.UpdateState(FloorEventChan, OrderToFSMChan)
+    go elevator.UpdateState(FloorEventChan, OrderToFSMChan, OrderTakenChan)
     
-    
-    //OrderMatrix := elevator.InitOrderMatrix()
-    
-    //fmt.Println("OrderMatrix: ", OrderMatrix)
-
-
+    go networkmodule.NetworkHandler(OrderToNetChan)
 
 	//fmt.Println(<-networkmodule.OrderChannel)
 	
@@ -55,14 +47,8 @@ func main(){
 	//fmt.Println("Starting again")
 	
    	//elevdriver.SetButtonLight(1, elevdriver.UP, elevdriver.ON)
-   	/*
-
-    go elevdriver.Poller(buttonEventChan, floorEventChan)
-    
-    
-    go HandleOrder()
    
-    */
+
     /*
     // Sender:
     
@@ -101,16 +87,12 @@ func main(){
  
         }
     }
-    
-   
+      
 	
 	fmt.Println(knapp.Floor)
-	
-	fmt.Println("før knapp")
-	
+	fmt.Println("før knapp")	
 	fmt.Println("recieved")
-	
-	
+		
 	fmt.Println("ferdi")
 	*/	
 	for {
@@ -118,63 +100,6 @@ func main(){
 	}
 }
 
-
-
-
-
-
-/*
-func foo(get, set chan []int){
-
-	var arr []int
-
-	for {
-		select {
-			case get <- arr:
-			
-			case arr := <- set:
-		}
-	}
-}
-
-
-setter := make(chan []int)
-getter := make(chan []int)
-
-go foo(getter, setter)
-
-
-func bar(getter, setter chan []int){
-
-	data := <- getter
-	data := <- getter
-	// data
-	
-	setter <- data
-}
-
-
-func bar(getter chan []int){
-
-	data := <- getter
-	data := <- getter
-	// data
-	
-}
-
-
-
-func getButtonEventChanCopy(ButtonEventChan chan elevdriver.Button){
-	
-
-
-
-}
-
-
-
-
-*/
 
 
 

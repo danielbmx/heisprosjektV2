@@ -25,24 +25,55 @@ func InitOrderMatrix() [4][3]int {
 func SaveOrder(readorder OrderToFSM, ordermatrix [4][3]int) [4][3]int{
 	
 	//time.Sleep(50*time.Millisecond)
-	ordermatrix[readorder.Floor/* - 1*/][readorder.Dir] = 1
+	ordermatrix[readorder.Floor][readorder.Dir] = 1
     return ordermatrix
 }
 
-// Her har Kristine begynt å rette opp ifra! Se over det!
 
-func DeleteOrder(readorder OrderToFSM, ordermatrix [4][3]int) [4][3]int{
-   ordermatrix[readorder.Floor/* - 1*/][readorder.Dir] = 0
+func DeleteOrder(floor int, dir Direction, ordermatrix [4][3]int, orderTakenChan chan<- OrderSetLight) [4][3]int{
+   var deleteLight OrderSetLight
+   deleteLight.Floor = floor
+   deleteLight.Light = OFF
+   
+   ordermatrix[floor][dir] = 0
+   deleteLight.Dir = dir 
+   orderTakenChan <- deleteLight
+   
+   ordermatrix[floor][NONE] = 0
+   deleteLight.Dir = NONE
+   orderTakenChan <- deleteLight
+   
+   switch dir{
+       case UP:
+            if !OrderAbove(floor, ordermatrix) {
+                ordermatrix[floor][DOWN] = 0
+                deleteLight.Dir = DOWN 
+                orderTakenChan <- deleteLight
+            }
+       case DOWN:
+            if !OrderBelow(floor, ordermatrix) {
+                ordermatrix[floor][UP] = 0
+                deleteLight.Dir = UP
+                orderTakenChan <- deleteLight
+            }    
+   }
    return ordermatrix
 }
 
 
 
 func StopAtFloor(dir Direction, floor int, ordermatrix [4][3]int) bool {
-	
-	if ordermatrix[floor/* - 1*/][dir] != 0 || ordermatrix[floor/* - 1*/][NONE] != 0 {
-		fmt.Println("true returned")
+	if ordermatrix[floor][dir] != 0 || ordermatrix[floor][NONE] != 0 {
+		fmt.Println("ordre i etasje")
 		return true
+	}
+	if floor == 0 || floor == 3 {
+	    fmt.Println("På topp / bunn")
+	    return true	
+	}
+	if !(OrderAbove(floor, ordermatrix) || OrderBelow(floor, ordermatrix)) {
+	    fmt.Println("Ingen ordre over/under!!!")
+	    return true
 	}else{
 		return false
 	}
