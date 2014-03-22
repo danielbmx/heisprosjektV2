@@ -2,7 +2,7 @@
 package elevator
 
 import (
-	"fmt"
+	//"fmt"
 	"time"
 
 ) 
@@ -16,49 +16,9 @@ type OrderSetLight struct {
 	Light LightVal
 }
 
-type OrderToFSM struct {
-    Floor int
-    Dir Direction
-}
-
 
 /*
-//Needs to be changed!
-func CalculateCost(buttonEventChan chan Button, floorEventChan chan int, floorDirectionChan chan Direction) int{
-	dir := <- floorDirectionChan
-	floorDirectionChan <- dir
-	floor := <- floorEventChan
-	floorEventChan <- floor
-	button := <- buttonEventChan
-	buttonEventChan <- button
-	score := 0
-	if dir != button.Dir {
-		score += 1
-	}
-	if floor != button.Floor {
-		score += 1
-	}
-	if button.Dir == DOWN {
-		if floor >= button.Floor{
-			score += (floor - button.Floor)
-		}else{
-			score += 4
-		}
-	}
-	if button.Dir == UP {
-		if floor <= button.Floor{
-			score += (button.Floor - floor)
-		}else{
-			score += 4
-		}
-	}
-	return score
-}
-
-
-
-
-func GetCost(client ClientStatus,external ClientExternalOrder,command map[string]ClientCommandOrders)int{
+func GetCost(client ClientStatus, external ClientExternalOrder, command map[string]ClientCommandOrders) int {
 	currentPos:=client.Floor
 	OrderedPos:=external.Floor
 	penalty := abs(client.Floor-external.Floor)
@@ -82,22 +42,9 @@ func GetCost(client ClientStatus,external ClientExternalOrder,command map[string
 
 */
 
-func GetCost(client LocalClient, btn Button) int {
-	
-	temp := client.Floor-btn.Floor
-	if temp < 0 {
-		temp = temp * -1
-	}	
-	
-	penalty := temp
-	
-	return penalty
-	
-}
 
 
-func OrderHandler(BtnPanelToOrderChan <-chan Button, SetLightChan chan<- OrderSetLight, OrderToFSMChan chan<- OrderToFSM, OrderTakenChan <-chan OrderSetLight, OrderToNetChan chan<- Button, BtnNetToOrderChan <-chan Button/*, LocalClientChan <-chan LocalClient*/){ // 7
-
+func OrderHandler(SetLightChan chan<- OrderSetLight, BtnPanelToOrderChan <-chan Button, OrderTakenChan <-chan OrderSetLight, OrderToFSMChan chan<- Button, LocalClientFSMToOrderChan <-chan LocalClient, ClientOrderToNetChan chan<- LocalClient, ClientNetToOrderChan <-chan LocalClient, BtnOrderToNetChan chan<- Button, BtnNetToOrderChan <-chan Button) {
    	/*
    	Provide neccesary order-handling based on information from driver via channels.
    	communication? 
@@ -108,28 +55,21 @@ func OrderHandler(BtnPanelToOrderChan <-chan Button, SetLightChan chan<- OrderSe
 	var btnFromPanel Button
 	var setBtnToPanel OrderSetLight
 	var btnFromNetwork Button 
-	var orderToFSM OrderToFSM
-	//var localClient LocalClient
+	var orderToFSM Button
+	var localClient LocalClient
 	
 	for{
 		time.Sleep(25*time.Millisecond)
-		/*
-		select{
-			case localClient = <- LocalClientChan:
-				fmt.Println("OrderHandler: localClient: ", localClient)
-			default:
-				continue
-			}
-		*/
-		fmt.Println("OrderHandler: her")
+		//fmt.Println("OrderHandler: her")
 		select{
 			// Case 1: Button pressed on own panel
 			case btnFromPanel = <- BtnPanelToOrderChan:
 				//fmt.Println("btnFromPanel Button", btnFromPanel)
 				
 				// Send order to network module
-				OrderToNetChan <- btnFromPanel
-				
+				if btnFromPanel.Dir != NONE {
+					BtnOrderToNetChan <- btnFromPanel
+				}
 				// Calculate cost related to taking order:
                 
 				// Compare cost with other elevators:
@@ -165,9 +105,11 @@ func OrderHandler(BtnPanelToOrderChan <-chan Button, SetLightChan chan<- OrderSe
 			// Case 2: Order received via network
 			case btnFromNetwork = <- BtnNetToOrderChan:
 				// Calculate cost related to taking order:
-
+				//Cost1 := GetCost(ClientFromNet, btnFromNetwork)
+				//Cost2 := GetCost(localClient, btnFromNetwork)
+				//Cost3 
 				// Compare cost with other elevators:
-			
+				
 			
 				// Tell panel to set light on
 				setBtnToPanel.Floor = btnFromNetwork.Floor
@@ -180,16 +122,60 @@ func OrderHandler(BtnPanelToOrderChan <-chan Button, SetLightChan chan<- OrderSe
 				orderToFSM.Floor = btnFromNetwork.Floor
 				orderToFSM.Dir = btnFromNetwork.Dir
 				OrderToFSMChan <- orderToFSM
-				
-			
+			//default:
+				//continue
+		//
+
+		//select 
+			case localClient = <- LocalClientFSMToOrderChan: // From FSM
+				//fmt.Println("OrderHandler: localClient: ", localClient)
+				select{				
+					case ClientOrderToNetChan <- localClient:
+						//fmt.Println("OrderHandler: her")
+					default:
+						//fmt.Println("OrderHandler: to default")
+						continue
+				}
+			//case ClientOrderToNetChan <- localClient:
+				//fmt.Println("Sending localclient to net")
+
+			case clientFromNet := <- ClientNetToOrderChan:
+				_ = clientFromNet
+				//fmt.Println("This is received from net:  ", clientFromNet)
+
 			default:
-				fmt.Println("OrderHandler: default")
+				//fmt.Println("OrderHandler: default")
 				continue
+		
 	
 		}
 	}
-	
+
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

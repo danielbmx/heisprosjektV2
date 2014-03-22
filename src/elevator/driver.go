@@ -54,9 +54,10 @@ func Init (buttonEventChan chan Button, floorEventChan chan int, initFloorChan c
     for{
         time.Sleep(25*time.Millisecond)
         select{
-            case <- initFloorChan:
+            case floor := <- initFloorChan:
                 fmt.Println("get floor")
                 ElevatorStop(DOWN)
+				SetFloorLight(floor)
                 fmt.Println("Out of init()")
                 return
             default:
@@ -101,9 +102,9 @@ func Poller(buttonEventChan         chan Button,
     }
 
     floorList := make(map[int]bool)
-    for key, _ := range floorMap {
+    /*for key, _ := range floorMap {
         floorList[key] = Read_bit(key)
-    }
+    }*/
 
     //oldStop := false
     //oldObs := false

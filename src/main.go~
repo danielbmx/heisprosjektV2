@@ -11,41 +11,50 @@ import (
 func main(){
    
    	fmt.Println("main")
+
+
+	// Driver channels:
+	ButtonEventChan 	:= make(chan elevator.Button, 1)
+	FloorEventChan 		:= make(chan int, 1)
+	InitFloorChan       := make(chan int, 1)
    	
-	// Create all neccesary channels:
-	ButtonEventChan 	:= make(chan elevator.Button)
-	FloorEventChan 		:= make(chan int)
-	InitFloorChan       := make(chan int)
-	
-	OrderTakenChan      := make(chan elevator.OrderSetLight)
+	// Channels between panel and ordersystem:
+	SetLightChan 		:= make(chan elevator.OrderSetLight, 1)
+	BtnPanelToOrderChan := make(chan elevator.Button, 1)
 
-	SetLightChan 		:= make(chan elevator.OrderSetLight)
-	BtnPanelToOrderChan := make(chan elevator.Button)
-	
+	// Channels between statemachine and ordersystem:
+	OrderTakenChan      := make(chan elevator.OrderSetLight, 1)
+	OrderToFSMChan		:= make(chan elevator.Button, 1)
+	LocalClientFSMToOrderChan	:= make(chan elevator.LocalClient, 1)
 
-	//BtnFromNetworkChan    := make(chan elevator.Button)
-	
-	//OrderChan	 		:= make(chan [4][3]int)
-	OrderToFSMChan		:= make(chan elevator.OrderToFSM)
-	OrderToNetChan      := make(chan elevator.Button)
 
-	BtnFromNetChan		:= make(chan elevator.Button)
-	BtnNetToOrderChan	:= make(chan elevator.Button)
-	
-	LocalClientChan		:= make(chan elevator.LocalClient, 10)
+	// Channels between net and ordersystem:
+	ClientOrderToNetChan := make(chan elevator.LocalClient, 1)
+	ClientNetToOrderChan 	:= make(chan elevator.LocalClient, 1)
+	//ClientNetToOrderChan := make(chan<- elevator.LocalClient)
+	BtnOrderToNetChan      := make(chan elevator.Button, 1)
+	BtnNetToOrderChan	:= make(chan elevator.Button, 1)
 
+
+	// Channels between Net and UDP: 
+	BtnFromUDPChan		:= make(chan elevator.Button, 1)
+	ClientFromUDPChan	:= make(chan elevator.LocalClient, 1)
 
 	elevator.Init(ButtonEventChan, FloorEventChan, InitFloorChan)
 
 	go elevator.PanelHandler(ButtonEventChan, SetLightChan, BtnPanelToOrderChan)
 	
-	go elevator.OrderHandler(BtnPanelToOrderChan, SetLightChan, OrderToFSMChan, OrderTakenChan, OrderToNetChan, BtnNetToOrderChan, LocalClientChan)
+	go elevator.OrderHandler(SetLightChan, BtnPanelToOrderChan, OrderTakenChan, OrderToFSMChan, LocalClientFSMToOrderChan, ClientOrderToNetChan , ClientNetToOrderChan, BtnOrderToNetChan, BtnNetToOrderChan)
 	
-	go networkmodule.NetworkHandler(OrderToNetChan, BtnFromNetChan, BtnNetToOrderChan)
+	go networkmodule.NetworkHandler(BtnOrderToNetChan, BtnFromUDPChan, BtnNetToOrderChan, ClientOrderToNetChan, ClientFromUDPChan, ClientNetToOrderChan)
+	
 
-    go elevator.UpdateState(FloorEventChan, OrderToFSMChan, OrderTakenChan, LocalClientChan)
+    go elevator.UpdateState(FloorEventChan, OrderToFSMChan, OrderTakenChan, LocalClientFSMToOrderChan)
     
-   
+	/*go func(){
+		time.Sleep(10*time.Second)
+		panic("\n")
+	}()*/
 
 	//fmt.Println(<-networkmodule.OrderChannel)
 	

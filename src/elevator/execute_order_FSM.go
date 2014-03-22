@@ -3,7 +3,8 @@
 package elevator
 
 import(
-    "fmt"
+    //"fmt"
+	"net"
 )
 
 
@@ -22,7 +23,7 @@ func InitOrderMatrix() [4][3]int {
 
 
 
-func SaveOrder(readorder OrderToFSM, ordermatrix [4][3]int) [4][3]int{
+func SaveOrder(readorder Button, ordermatrix [4][3]int) [4][3]int{
 	
 	//time.Sleep(50*time.Millisecond)
 	ordermatrix[readorder.Floor][readorder.Dir] = 1
@@ -71,6 +72,12 @@ func StopAtFloor(dir Direction, floor int, ordermatrix [4][3]int) bool {
 	    //fmt.Println("På topp / bunn")
 	    return true	
 	}
+	/*if dir == UP && !OrderAbove(floor, ordermatrix) {
+	    return true
+	}
+	if dir == DOWN && !OrderBelow(floor, ordermatrix) {
+		return true
+	}*/
 	if !(OrderAbove(floor, ordermatrix) || OrderBelow(floor, ordermatrix)) {
 	    //fmt.Println("Ingen ordre over/under!!!")
 	    return true
@@ -102,34 +109,46 @@ func OrderBelow(floor int, ordermatrix [4][3]int) bool {
 }
 
 // This now returns a direction
-func GetNextDirection(dir Direction, floor int, ordermatrix [4][3]int) Direction{
-    fmt.Println("Getting dir, floor:", floor)
+func GetNextDirection(dir Direction, prevDir Direction, floor int, ordermatrix [4][3]int) Direction{
+//    fmt.Println("Getting dir, floor:", floor)
 	switch dir {
 		case NONE:
+			switch prevDir {
+				case UP:
+					if OrderAbove(floor, ordermatrix) {
+//			    		fmt.Println("NONE -> UP")
+						return UP
+					}
+				case DOWN: 
+					if OrderBelow(floor, ordermatrix) {
+//			    		fmt.Println("NONE -> DOWN")
+						return DOWN
+					}
+			}
 			if OrderBelow(floor, ordermatrix) {
-			    fmt.Println("NONE -> DOWN")
+//			    fmt.Println("NONE -> DOWN")
 				return DOWN
 			}
 			if OrderAbove(floor, ordermatrix) {
-			    fmt.Println("NONE -> UP")
+//			    fmt.Println("NONE -> UP")
 				return UP
 			}
 		case UP:
 			if OrderAbove(floor, ordermatrix) {
-			    fmt.Println("UP -> UP")
+//			    fmt.Println("UP -> UP")
 				return UP
 			}
 			if OrderBelow(floor, ordermatrix) {
-			    fmt.Println("UP -> DOWN")
+//			    fmt.Println("UP -> DOWN")
 				return DOWN
 			}
 		case DOWN:
 			if OrderBelow(floor, ordermatrix) {
-			    fmt.Println("DOWN -> DOWN")
+//			    fmt.Println("DOWN -> DOWN")
 				return DOWN
 			}
 			if OrderAbove(floor, ordermatrix) {
-			    fmt.Println("DOWN -> UP")
+//			    fmt.Println("DOWN -> UP")
 				return UP
 			}
 		}
@@ -146,6 +165,35 @@ func ResetOrder(elevator int, ordermatrix [4][3]int) [4][3]int {
 		}
 	}
 	return ordermatrix
+}
+
+
+// Function for returning local IP
+func LocalIP() (net.IP, error) { 
+	tt, err := net.Interfaces() 
+	if err != nil { 
+		return nil, err 
+	} 
+	for _, t := range tt { 
+		aa, err := t.Addrs() 
+		if err != nil { 
+			return nil, err 
+		} 
+		for _, a := range aa { 
+			ipnet, ok := a.(*net.IPNet) 
+			if !ok { 
+				continue 
+			} 
+			v4 := ipnet.IP.To4() 
+			if v4 == nil || v4[0] == 127 { 
+				// loopback address 
+				continue
+			} 
+			return v4, nil 
+		} 
+	} 
+	return nil, nil 
+	//errors.New("cannot find local IP address") 
 }
 
 
