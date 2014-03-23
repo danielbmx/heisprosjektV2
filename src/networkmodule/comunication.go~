@@ -30,8 +30,8 @@ func NetworkHandler(BtnOrderToNetChan <-chan elevator.Button, BtnFromUDPChan cha
 	client.IpAddr, _ = elevator.LocalIP()
 	
 
-	// map with all peers joined:
-	AllPeers := make(map[string]elevator.LocalClient)
+	// map with all clients joined:
+	AllClients := make(map[string]elevator.LocalClient)
 
     // Make connections
     BtnPort := "129.241.187.255:20005"
@@ -54,10 +54,10 @@ func NetworkHandler(BtnOrderToNetChan <-chan elevator.Button, BtnFromUDPChan cha
 			// Case 2: Button is recived via UDP
             case btnFromNet := <- BtnFromUDPChan:
 				// Calculate cost related to taking the order:
-				best_peer := OrderDistribute(AllPeers, btnFromNet)				
+				best_client := OrderDistribute(AllClients, btnFromNet)				
 				
 				// Take order if you have the lowest cost			
-				if best_peer.IpAddr.String() == client.IpAddr.String(){
+				if best_client.IpAddr.String() == client.IpAddr.String(){
 					// Send to Ordersystem
 					BtnNetToOrderChan <- btnFromNet
 				}
@@ -70,7 +70,7 @@ func NetworkHandler(BtnOrderToNetChan <-chan elevator.Button, BtnFromUDPChan cha
 			// Case 4: Client is recived  via UDP
 			case clientFromNet := <- ClientFromUDPChan:
 				// Put Client in map
-				AllPeers[clientFromNet.IpAddr.String()] = clientFromNet
+				AllClients[clientFromNet.IpAddr.String()] = clientFromNet
 				ClientNetToOrderChan <- clientFromNet
         }
     }
@@ -196,27 +196,27 @@ func GetCost(client elevator.LocalClient, btn elevator.Button) int {
 
 
 // Finds the IP with the lowest cost and gives the order
-func OrderDistribute(peers map[string]elevator.LocalClient, btn elevator.Button) elevator.LocalClient {
+func OrderDistribute(Clients map[string]elevator.LocalClient, btn elevator.Button) elevator.LocalClient {
 	least_cost := 10
-	var best_peer elevator.LocalClient
+	var best_client elevator.LocalClient
 	
 	// Setting first IP to best IP
-	for k,_ := range peers {
-		best_peer = peers[k]
+	for k,_ := range Clients {
+		best_client = Clients[k]
 		break
 
 	}
 	
 	// Go through IP-map to find best elevator to take order
-	for key,_ := range peers {
-		temp_cost := GetCost(peers[key],btn)
+	for key,_ := range Clients {
+		temp_cost := GetCost(Clients[key],btn)
 		if temp_cost < least_cost {
 			least_cost = temp_cost
-			best_peer = peers[key]		
+			best_client = Clients[key]		
 
 		}
 	}
-	return best_peer
+	return best_client
 }
 
 func PrintError(err error) {

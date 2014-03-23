@@ -28,7 +28,7 @@ const(
 )
 
 type LocalClient struct {
-    currentState State
+    CurrentState State
     CurrentDir Direction
 	Floor int
 	IpAddr net.IP
@@ -53,7 +53,7 @@ func UpdateState(floorEventChan <-chan int, OrderToFSMChan <-chan Button, OrderT
 	var prevDir Direction
 
 	// initialize localClient
-	localClient.currentState = STANDSTILL
+	localClient.CurrentState = STANDSTILL
 	localClient.CurrentDir = NONE
 	localClient.Floor = -1
 	localClient.IpAddr,_ = LocalIP()
@@ -102,7 +102,7 @@ func UpdateState(floorEventChan <-chan int, OrderToFSMChan <-chan Button, OrderT
 		    }
 
 
-		switch localClient.currentState {
+		switch localClient.CurrentState {
 		
 		    case MOVING:
 		        switch event {
@@ -116,7 +116,7 @@ func UpdateState(floorEventChan <-chan int, OrderToFSMChan <-chan Button, OrderT
 						doorIsOpen = true
                 		go timeAfter(doorClose, 3*time.Second)
 		          		//Update client
-		                localClient.currentState = STANDSTILL
+		                localClient.CurrentState = STANDSTILL
 						prevDir = localClient.CurrentDir
 		                localClient.CurrentDir = NONE
                         break
@@ -131,7 +131,7 @@ func UpdateState(floorEventChan <-chan int, OrderToFSMChan <-chan Button, OrderT
 		                newDir := GetNextDirection(localClient.CurrentDir, prevDir, localClient.Floor, OrderMatrix)
 		                SetMotorDir(newDir)
 						//Update client
-		                localClient.currentState = MOVING
+		                localClient.CurrentState = MOVING
 		                localClient.CurrentDir = newDir
 
 		                break
@@ -142,8 +142,7 @@ func UpdateState(floorEventChan <-chan int, OrderToFSMChan <-chan Button, OrderT
 		       }
     		   break
 		   }	    
-	}
-	
+	}	
 }
 
 
@@ -152,6 +151,27 @@ func timeAfter(ch chan bool, t time.Duration){
     ch <- true
     fmt.Println("timer event has passed")
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
