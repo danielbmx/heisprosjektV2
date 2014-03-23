@@ -29,7 +29,7 @@ const(
 
 type LocalClient struct {
     currentState State
-    currentDir Direction
+    CurrentDir Direction
 	Floor int
 	IpAddr net.IP
 
@@ -57,7 +57,7 @@ func UpdateState(floorEventChan <-chan int, OrderToFSMChan <-chan Button, OrderT
 
 	// initialize localClient
 	localClient.currentState = STANDSTILL
-	localClient.currentDir = NONE
+	localClient.CurrentDir = NONE
 	localClient.Floor = -1
 	localClient.IpAddr,_ = LocalIP()
 	
@@ -84,13 +84,13 @@ func UpdateState(floorEventChan <-chan int, OrderToFSMChan <-chan Button, OrderT
 	                SetDoorOpenLight(ON)
 					doorIsOpen = true
 					go timeAfter(doorClose, 3*time.Second)
-		            OrderMatrix = DeleteOrder(localClient.Floor, localClient.currentDir, OrderMatrix, OrderTakenChan)
+		            OrderMatrix = DeleteOrder(localClient.Floor, localClient.CurrentDir, OrderMatrix, OrderTakenChan)
 				}
 				*/
-		        /*if StopAtFloor(localClient.currentDir, localClient.Floor, OrderMatrix) {
+		        /*if StopAtFloor(localClient.CurrentDir, localClient.Floor, OrderMatrix) {
 		            event = HALT		            
 		            // Delete order from ordermatrix and tell panel to turn off lights
-		            OrderMatrix = DeleteOrder(localClient.Floor, localClient.currentDir, OrderMatrix, OrderTakenChan)
+		            OrderMatrix = DeleteOrder(localClient.Floor, localClient.CurrentDir, OrderMatrix, OrderTakenChan)
 		            fmt.Println("Order was at this floor:", OrderMatrix)
 		        }*/
 		        
@@ -98,12 +98,12 @@ func UpdateState(floorEventChan <-chan int, OrderToFSMChan <-chan Button, OrderT
 				// If floor is updated, check if stop is needed
 		        localClient.Floor = newFloor
 				SetFloorLight(newFloor)
-		        if StopAtFloor(localClient.currentDir, localClient.Floor, OrderMatrix) {
+		        if StopAtFloor(localClient.CurrentDir, localClient.Floor, OrderMatrix) {
 		            
 		            event = HALT
 		            
 		            // Delete order from ordermatrix and tell panel to turn off lights
-		            OrderMatrix = DeleteOrder(localClient.Floor, localClient.currentDir, OrderMatrix, OrderTakenChan)
+		            OrderMatrix = DeleteOrder(localClient.Floor, localClient.CurrentDir, OrderMatrix, OrderTakenChan)
 		            fmt.Println(OrderMatrix)
 		        }
 		    //case <- stateHasChanged:
@@ -112,7 +112,7 @@ func UpdateState(floorEventChan <-chan int, OrderToFSMChan <-chan Button, OrderT
 				//If timer is out -> close door and get next direction
 	            SetDoorOpenLight(OFF)
 	            doorIsOpen = false
-	            newDir := GetNextDirection(localClient.currentDir, prevDir, localClient.Floor, OrderMatrix)
+	            newDir := GetNextDirection(localClient.CurrentDir, prevDir, localClient.Floor, OrderMatrix)
 	            if newDir != NONE {
 	                event = MOVE
 	            }
@@ -126,15 +126,15 @@ func UpdateState(floorEventChan <-chan int, OrderToFSMChan <-chan Button, OrderT
 		                break 
 		            case HALT:
 		                //Stop elevator and open door for 3 sec
-		                ElevatorStop(localClient.currentDir)
+		                ElevatorStop(localClient.CurrentDir)
 		                SetDoorOpenLight(ON)
 		                doorIsOpen = true
                 		go timeAfter(doorClose, 3*time.Second)
 		          		//Update client
 		                localClient.currentState = STANDSTILL
 		                //stateHasChanged <- true
-						prevDir = localClient.currentDir
-		                localClient.currentDir = NONE
+						prevDir = localClient.CurrentDir
+		                localClient.CurrentDir = NONE
                         break
                 }
                 break      
@@ -144,12 +144,12 @@ func UpdateState(floorEventChan <-chan int, OrderToFSMChan <-chan Button, OrderT
 
 		            case MOVE:
 		                //Figure out new direction and move
-		                newDir := GetNextDirection(localClient.currentDir, prevDir, localClient.Floor, OrderMatrix)
+		                newDir := GetNextDirection(localClient.CurrentDir, prevDir, localClient.Floor, OrderMatrix)
 		                SetMotorDir(newDir)
 						//Update client
 		                localClient.currentState = MOVING
 		                //stateHasChanged <- true
-		                localClient.currentDir = newDir
+		                localClient.CurrentDir = newDir
 
 		                break
 		            
@@ -163,10 +163,10 @@ func UpdateState(floorEventChan <-chan int, OrderToFSMChan <-chan Button, OrderT
 
 						}
 						
-						if StopAtFloor(localClient.currentDir, localClient.Floor, OrderMatrix) {
+						if StopAtFloor(localClient.CurrentDir, localClient.Floor, OrderMatrix) {
 		            
 		            		event = HALT
-		      				OrderMatrix = DeleteOrder(localClient.Floor, localClient.currentDir, OrderMatrix, OrderTakenChan)    
+		      				OrderMatrix = DeleteOrder(localClient.Floor, localClient.CurrentDir, OrderMatrix, OrderTakenChan)    
 		        		}*/
                 		break
 		       }

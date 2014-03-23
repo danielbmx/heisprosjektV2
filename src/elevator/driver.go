@@ -47,21 +47,16 @@ func Init (buttonEventChan chan Button, floorEventChan chan int, initFloorChan c
     
     SetMotorDir(NONE)
 
-
-	fmt.Println("start poller")
    	Poller(buttonEventChan, floorEventChan, initFloorChan)
     
     for{
         time.Sleep(25*time.Millisecond)
         select{
             case floor := <- initFloorChan:
-                fmt.Println("get floor")
                 ElevatorStop(DOWN)
 				SetFloorLight(floor)
-                fmt.Println("Out of init()")
                 return
             default:
-                //fmt.Println("default")
                 SetMotorDir(DOWN)
         }
     }
@@ -102,13 +97,6 @@ func Poller(buttonEventChan         chan Button,
     }
 
     floorList := make(map[int]bool)
-    /*for key, _ := range floorMap {
-        floorList[key] = Read_bit(key)
-    }*/
-
-    //oldStop := false
-    //oldObs := false
-
 
     go func(){
         initCounter := 0
@@ -172,9 +160,8 @@ func SetMotorDir(newDir Direction) {
     prevDir = newDir
 }
 
-// SetOrderButtonLight()? Stop is also a button...
+// Setting Button lights
 func SetButtonLight(floor int, dir Direction, onoff LightVal) {
-//fmt.Println("Setting light: ", floor, dir, onoff)
     switch onoff {
     case ON:
         switch {
@@ -264,7 +251,7 @@ func SetDoorOpenLight(onoff LightVal) {
     }
 }
 
-
+// Stoping elevator
 func ElevatorStop(direction Direction) {
 	if direction == UP {
 		SetMotorDir(DOWN)
